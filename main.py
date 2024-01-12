@@ -11,6 +11,10 @@ import socket
 PATH_TO_SAVED_DEVICES = join(path[0], 'ezwol.json')
 PORT = 9
 
+# If the program was unable to automatically detect the broadcast IP, change None to your broadcast IP
+# For example: 192.168.1.255
+CUSTOM_BROADCAST_IP = "None"
+
 
 class Message(CTkToplevel):
     def __init__(self, message: str, title: str = "Error"):
@@ -29,6 +33,7 @@ class App(CTk):
         super().__init__()
         self.title("Ez WoL")
         self.storage = []
+        self.broadcast_ip = self.get_broadcast_ip()
 
         # ----- LEFT -----
         select_device = CTkLabel(self, text="Select device")
@@ -144,6 +149,10 @@ class App(CTk):
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         # Sending payload
         sock.sendto(payload, ("255.255.255.255", PORT))
+        sock.sendto(payload, (self.broadcast_ip, PORT))
+
+        if CUSTOM_BROADCAST_IP != "None":
+            sock.sendto(payload, (CUSTOM_BROADCAST_IP, PORT))
 
     def view_mac(self):
         if self.device_menu.cget("state") == "disabled":
@@ -154,6 +163,13 @@ class App(CTk):
         device = self.device_menu.get()
         mac = [i["MAC"] for i in self.storage if i["Device Name"] == device][0]
         Message(f"MAC: {mac}", title=device)
+
+    @staticmethod
+    def get_broadcast_ip():
+        ip = socket.gethostbyname(socket.gethostname()).split('.')
+        ip[-1] = 255
+        ip = [str(i) for i in ip]
+        return ".".join(ip)
 
 
 if __name__ == "__main__":
